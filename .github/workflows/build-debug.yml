@@ -18,6 +18,24 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
+      - name: Generate Gradle Wrapper
+        run: |
+          mkdir -p gradle/wrapper
+          echo 'distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
+          networkTimeout=10000
+          validateDistributionUrl=true
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists' > gradle/wrapper/gradle-wrapper.properties
+          
+          # Download gradle wrapper jar
+          curl -L https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradlew -o gradlew
+          chmod +x gradlew
+          
+          # Generate wrapper
+          ./gradlew wrapper --gradle-version 8.5
+
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
