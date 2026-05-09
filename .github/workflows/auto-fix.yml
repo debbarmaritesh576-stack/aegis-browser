@@ -1,0 +1,54 @@
+name: Auto Fix & Merge
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [main]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-fix:
+    name: Auto Fix & Auto Merge
+    runs-on: ubuntu-latest
+    if: contains(github.event.pull_request.labels.*.name, 'automerge')
+    
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+
+      - name: Setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: 8.5
+
+      - name: Auto Fix Lint Issues
+        run: ./gradlew lint 2>/dev/null || true
+
+      - name: Auto Format Code
+        run: |
+          find . -name "*.kt" -type f -exec sed -i 's/[[:space:]]*$//g' {} \;
+          find . -name "*.xml" -type f -exec sed -i 's/[[:space:]]*$//g' {} \;
+
+      - name: Commit Auto Fixes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git diff --quiet && git diff --staged --quiet || git commit -m " Auto-fix"
+          git push
+
+      - name: Auto Merge PR
+        if: success()
+        run: gh pr merge ${{ github.event.pull_request.number }} --merge --auto
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
